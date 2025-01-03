@@ -137,12 +137,18 @@ func (r *VirtualMachine) ValidateUpdate(old runtime.Object) (admission.Warnings,
 		{".spec.enableAcceleration", func(v *VirtualMachine) any { return v.Spec.EnableAcceleration }},
 		{".spec.enableSSH", func(v *VirtualMachine) any { return v.Spec.EnableSSH }},
 		{".spec.initScript", func(v *VirtualMachine) any { return v.Spec.InitScript }},
+		{".spec.enableNetworkMonitoring", func(v *VirtualMachine) any { return v.Spec.EnableNetworkMonitoring }},
 	}
 
 	for _, info := range immutableFields {
 		if !reflect.DeepEqual(info.getter(r), info.getter(before)) {
 			return nil, fmt.Errorf("%s is immutable", info.fieldName)
 		}
+	}
+
+	// allow to change CPU scaling mode only if it's not set
+	if before.Spec.CpuScalingMode != nil && (r.Spec.CpuScalingMode == nil || *r.Spec.CpuScalingMode != *before.Spec.CpuScalingMode) {
+		return nil, fmt.Errorf(".spec.cpuScalingMode is not allowed to be changed once it's set")
 	}
 
 	// validate .spec.guest.cpu.use
